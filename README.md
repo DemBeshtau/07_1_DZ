@@ -30,3 +30,4 @@ passwd root
 touch /.autoreleable
 exit
 ```
+&ensp;&ensp;Для того, чтобы стало возможным осуществлять вход в систему, необходимо 
