@@ -175,4 +175,103 @@ sda                     8:0    0   40G  0 disk
 
 [vagrant@grub-test ~]$ exit
 ```
-### Добавить модуль в initrd ###
+### 3. Добавить модуль в initrd ###
+3.1. Подготовка модулей:<br/>
+```shell
+[vagrant@grub-test ~]$ sudo -i
+
+[root@grub-test ~]# cd /usr/lib/dracut/modules.d
+
+[root@grub-test modules.d]# mkdir 01test
+
+[root@grub-test modules.d]# cd 01test/
+
+[root@grub-test 01test]# touch module-setup.sh
+
+[root@grub-test 01test]# touch test.sh
+
+[root@grub-test 01test]# chmod a+x module-setup.sh test.sh 
+
+[root@grub-test 01test]# nano module-setup.sh 
+...
+
+[root@grub-test 01test]# cat module-setup.sh 
+#!/bin/bash
+
+check() {
+    return 0
+}
+
+depends() {
+    return 0
+}
+
+install() {
+    inst_hook cleanup 00 "${moddir}/test.sh"
+}
+
+[root@grub-test 01test]# nano test.sh 
+...
+
+[root@grub-test 01test]# cat test.sh 
+#!/bin/bash
+
+exec 0<>/dev/console 1<>/dev/console 2<>/dev/console
+cat <<'msgend'
+Hello! You are in dracut module!
+ ___________________
+< I'm dracut module >
+ -------------------
+   \
+    \
+        .--.
+       |o_o |
+       |:_/ |
+      //   \ \
+     (|     | )
+    /'\_   _/`\
+    \___)=(___/
+msgend
+sleep 10
+echo " continuing...."
+```
+3.2. Пересборка модуля initrd:<br/>
+```shell
+[root@grub-test 01test]# cd /boot
+
+[root@grub-test boot]# mv initramfs-3.10.0-862.2.3.el7.x86_64.img initramfs-3.10.0-862.2.3.el7.x86_64.img  .old
+
+[root@grub-test boot]# dracut initramfs-`uname -r`.img
+/sbin/dracut: line 655: warning: setlocale: LC_MESSAGES: cannot change locale (ru_RU.UTF-8): No such file or directory
+/sbin/dracut: line 656: warning: setlocale: LC_CTYPE: cannot change locale (ru_RU.UTF-8): No such file or directory
+
+[root@grub-test boot]# ll
+total 40296
+-rw-------. 1 root root  3409102 May  9  2018 System.map-3.10.0-862.2.3.el7.x86_64
+-rw-r--r--. 1 root root   147823 May  9  2018 config-3.10.0-862.2.3.el7.x86_64
+drwxr-xr-x. 3 root root       17 May 12  2018 efi
+drwxr-xr-x. 2 root root       27 May 12  2018 grub
+drwx------. 5 root root       97 May 12  2018 grub2
+-rw-------. 1 root root 14658055 Apr 17 15:20 initramfs-3.10.0-862.2.3.el7.x86_64.img
+-rw-------. 1 root root 16506787 May 12  2018 initramfs-3.10.0-862.2.3.el7.x86_64.img.old
+-rw-r--r--. 1 root root   304926 May  9  2018 symvers-3.10.0-862.2.3.el7.x86_64.gz
+-rwxr-xr-x. 1 root root  6225056 May  9  2018 vmlinuz-3.10.0-862.2.3.el7.x86_64
+
+[root@grub-test boot]# lsinitrd -m initramfs-3.10.0-862.2.3.el7.x86_64.img | grep test
+test
+```
+3.3. Удаление опций rhgb и quiet в файле grub.cfg и перезагрузка системы:<br/>
+```shell
+[root@grub-test boot]# nano /boot/grub2/grub.cfg 
+...
+
+[root@grub-test boot]# cat /boot/grub2/grub.cfg
+...
+	linux16 /vmlinuz-3.10.0-862.2.3.el7.x86_64 root=/dev/mapper/VolGroup00-LogVol00 ro no_timer_check console=tty0 console=ttyS0,115200n8 net.ifnames=0 biosdevname=0 elevator=noop crashkernel=auto rd.lvm.lv=VolGroup00/LogVol00 rd.lvm.lv=VolGroup00/LogVol01 
+	initrd16 /initramfs-3.10.0-862.2.3.el7.x86_64.img
+...
+
+[root@grub-test boot]# reboot
+```
+3.4. Просмотр результата выполнения задания:<br/>
+![изображение](https://github.com/DemBeshtau/07_1_DZ/assets/149678567/3659fd57-8521-44d7-8804-5988920a91e2)
